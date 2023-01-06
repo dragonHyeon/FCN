@@ -1,137 +1,115 @@
-import torch
 import torch.nn as nn
+from torchvision.models import vgg16
+
+# VGG-16 Max pooling 단위로 자르기
+ranges = {'vgg16': ((0, 5), (5, 10), (10, 17), (17, 24), (24, 31))}
 
 
-class VGG(nn.Module):
-    def __init__(self, cfg, num_classes=100, init_weights=True):
+class VGGNet(nn.Module):
+    def __init__(self, pretrained=True):
         """
         * 모델 구조 정의
-        :param cfg: VGG 모델 옵션 (VGGNet feature extractor 옵션)
-        :param num_classes: 출력 클래스 개수
-        :param init_weights: 가중치 초기화 여부
+        * FCNs 의 backbone 네트워크로 사용될 네트워크 (VGG-16)
+        :param pretrained: 미리 학습된 가중치 불러오기 여부
         """
 
-        super(VGG, self).__init__()
+        super(VGGNet, self).__init__()
 
-        # feature extractor
-        self.features = make_layers(cfg=cfg)
+        # VGG-16 Max pooling 단위로 자르기 위한 준비
+        self.ranges = ranges['vgg16']
 
-        # classifier
-        self.classifier = nn.Sequential(
-            nn.Linear(in_features=512 * 7 * 7, out_features=4096),
-            nn.ReLU(),
-            nn.Dropout(p=0.5),
-            nn.Linear(in_features=4096, out_features=4096),
-            nn.ReLU(),
-            nn.Dropout(p=0.5),
-            nn.Linear(in_features=4096, out_features=num_classes)
-        )
-
-        # 가중치 초기화
-        if init_weights:
-            self._initialize_weights()
+        # (N, 3, 224, 224) -> (N, 512, 7, 7)
+        self.features = vgg16(pretrained=pretrained).features
 
     def forward(self, x):
         """
         * 순전파
         :param x: 배치 개수 만큼의 입력. (N, 3, 224, 224)
-        :return: 배치 개수 만큼의 출력. (N, 100)
+        :return: Max pooling 단위 결과 모음 dict
         """
 
+        # Max pooling 단위로 끊어서 결과 담기 위한 dict
+        output = {}
+
+        # Max pooling 단위로 끊어서 결과 담기
+        for idx in range(len(self.ranges)):
+            for layer in range(self.ranges[idx][0], self.ranges[idx][1]):
+                x = self.features[layer](x)
+            output['x{0}'.format(idx+1)] = x
+
+        return output
+
+
+class FCNs(nn.Module):
+    def __init__(self, pretrained_net, num_classes):
+        """
+        * 모델 구조 정의
+        :param pretrained_net: 미리 학습된 backbone 네트워크 (VGG-16)
+        :param num_classes: 출력 클래스 개수 (image segmentation 시 분류해야 할 전체 label 의 개수)
+        """
+
+        super(FCNs, self).__init__()
+
+        self.num_classes = num_classes
+
+        self.relu = nn.ReLU(inplace=True)
+
+        # feature extractor
         # (N, 3, 224, 224) -> (N, 512, 7, 7)
-        x = self.features(x)
-        # (N, 512, 7, 7) -> (N, 512 * 7 * 7)
-        x = torch.flatten(x, 1)
-        # (N, 512 * 7 * 7) -> (N, 100)
-        x = self.classifier(x)
+        self.pretrained_net = pretrained_net
 
-        return x
+        # (N, 512, 7, 7) -> (N, 512, 14, 14)
+        self.deconv1 = nn.ConvTranspose2d(in_channels=512, out_channels=512, kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.bn1 = nn.BatchNorm2d(num_features=512)
+        # (N, 512, 14, 14) -> (N, 256, 28, 28)
+        self.deconv2 = nn.ConvTranspose2d(in_channels=512, out_channels=256, kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.bn2 = nn.BatchNorm2d(num_features=256)
+        # (N, 256, 28, 28) -> (N, 128, 56, 56)
+        self.deconv3 = nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.bn3 = nn.BatchNorm2d(num_features=128)
+        # (N, 128, 56, 56) -> (N, 64, 112, 112)
+        self.deconv4 = nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.bn4 = nn.BatchNorm2d(num_features=64)
+        # (N, 64, 112, 112) -> (N, 32, 224, 224)
+        self.deconv5 = nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.bn5 = nn.BatchNorm2d(num_features=32)
 
-    def _initialize_weights(self):
+        # NIN
+        # (N, 32, 224, 224) -> (N, num_classes, 224, 224)
+        self.classifier = nn.Conv2d(in_channels=32, out_channels=num_classes, kernel_size=1)
+
+    def forward(self, x):
         """
-        * 모델 가중치 초기화
-        :return: 모델 가중치 초기화 진행됨
+        * 순전파
+        :param x: 배치 개수 만큼의 입력. (N, 3, 224, 224)
+        :return: 배치 개수 만큼의 출력. (N, num_classes, 224, 224)
         """
 
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(tensor=m.weight, mode='fan_out', nonlinearity='relu')
-                if m.bias is not None:
-                    nn.init.constant_(tensor=m.bias, val=0)
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(tensor=m.weight, val=1)
-                nn.init.constant_(tensor=m.bias, val=0)
-            elif isinstance(m, nn.Linear):
-                nn.init.normal_(tensor=m.weight, mean=0, std=0.01)
-                nn.init.constant_(tensor=m.bias, val=0)
+        # Max pooling 단위 결과 모음 dict
+        output = self.pretrained_net(x)
 
+        # (N, 3, 224, 224) -> (N, 64, 112, 112)
+        x1 = output['x1']
+        # (N, 64, 112, 112) -> (N, 128, 56, 56)
+        x2 = output['x2']
+        # (N, 128, 56, 56) -> (N, 256, 28, 28)
+        x3 = output['x3']
+        # (N, 256, 28, 28) -> (N, 512, 14, 14)
+        x4 = output['x4']
+        # (N, 512, 14, 14) -> (N, 512, 7, 7)
+        x5 = output['x5']
 
-def make_layers(cfg):
-    """
-    * VGGNet feature extractor
-    :param cfg: 'A', 'B', 'D', 'E' 중에 선택 (VGG-11, VGG-13, VGG-16, VGG-19)
-    :return: VGGNet feature extractor 만들어 줌
-    """
+        # (N, 512, 7, 7) -> (N, 512, 14, 14)
+        score = x4 + self.bn1(self.relu(self.deconv1(x5)))
+        # (N, 512, 14, 14) -> (N, 256, 28, 28)
+        score = x3 + self.bn2(self.relu(self.deconv2(score)))
+        # (N, 256, 28, 28) -> (N, 128, 56, 56)
+        score = x2 + self.bn3(self.relu(self.deconv3(score)))
+        # (N, 128, 56, 56) -> (N, 64, 112, 112)
+        score = x1 + self.bn4(self.relu(self.deconv4(score)))
+        # (N, 64, 112, 112) -> (N, 32, 224, 224)
+        score = self.bn5(self.relu(self.deconv5(score)))
+        # (N, 32, 224, 224) -> (N, num_classes, 224, 224)
+        score = self.classifier(score)
 
-    # VGGNet feature extractor 담을 리스트
-    layers = []
-
-    in_channels = 3
-    for v in cfg:
-        if v == 'M':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
-        else:
-            layers += [nn.Conv2d(in_channels=in_channels, out_channels=v, kernel_size=3, stride=1, padding=1)]
-            layers += [nn.ReLU()]
-            in_channels = v
-
-    return nn.Sequential(*layers)
-
-
-# VGG 모델 옵션 (VGGNet feature extractor 옵션)
-cfgs = {
-    # VGG-11
-    'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    # VGG-13
-    'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    # VGG-16
-    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
-    # VGG-19
-    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M']
-}
-
-
-def vgg11():
-    """
-    * VGG-11
-    :return: VGG 11-layer 모델
-    """
-
-    return VGG(cfg=cfgs['A'])
-
-
-def vgg13():
-    """
-    * VGG-13
-    :return: VGG 13-layer 모델
-    """
-
-    return VGG(cfg=cfgs['B'])
-
-
-def vgg16():
-    """
-    * VGG-16
-    :return: VGG 16-layer 모델
-    """
-
-    return VGG(cfg=cfgs['D'])
-
-
-def vgg19():
-    """
-    * VGG-19
-    :return: VGG 19-layer 모델
-    """
-
-    return VGG(cfg=cfgs['E'])
+        return score

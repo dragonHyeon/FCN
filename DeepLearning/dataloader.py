@@ -1,26 +1,48 @@
-from torchvision import transforms
-from torchvision.datasets import CIFAR100
+import os
 
+from PIL import Image
+from torchvision import transforms
+from torch.utils.data import Dataset
+
+from Lib import UtilLib
 from Common import ConstVar
 
-# CIFAR-100 학습용 데이터셋
-CIFAR100_train = CIFAR100(root=ConstVar.DATA_DIR_TRAIN,
-                          train=True,
-                          transform=transforms.Compose([
-                              transforms.Resize(size=ConstVar.RESIZE_SIZE),
-                              transforms.ToTensor(),
-                              transforms.Normalize(mean=(0.5, 0.5, 0.5),
-                                                   std=(0.5, 0.5, 0.5))
-                          ]),
-                          download=True)
 
-# CIFAR-100 테스트용 데이터셋
-CIFAR100_test = CIFAR100(root=ConstVar.DATA_DIR_TEST,
-                         train=False,
-                         transform=transforms.Compose([
-                             transforms.Resize(size=ConstVar.RESIZE_SIZE),
-                             transforms.ToTensor(),
-                             transforms.Normalize(mean=(0.5, 0.5, 0.5),
-                                                  std=(0.5, 0.5, 0.5))
-                         ]),
-                         download=True)
+class SIGNSDataset(Dataset):
+    def __init__(self, data_dir, mode_train_test):
+        """
+        * SIGNSDataset 데이터로더
+        :param data_dir: 데이터 디렉터리
+        :param mode_train_test: 학습 / 테스트 모드
+        """
+
+        # 데이터 해당 디렉터리
+        self.data_dir = data_dir
+        # 학습 / 테스트 모드
+        self.mode_train_test = mode_train_test
+
+        # 파일 경로 모음
+        self.files = [UtilLib.getNewPath(path=data_dir,
+                                         add=filename)
+                      for filename in os.listdir(self.data_dir)]
+        # 레이블 모음
+        # 파일명 예시: '0_IMG_5864.jpg'
+        self.labels = [int(filename[0]) for filename in os.listdir(self.data_dir)]
+
+        # 모드에 따른 데이터 전처리 방법
+        self.transform = {
+            ConstVar.MODE_TRAIN: transforms.Compose([
+                transforms.Resize(size=ConstVar.RESIZE_SIZE),
+                transforms.ToTensor()
+            ]),
+            ConstVar.MODE_TEST: transforms.Compose([
+                transforms.Resize(size=ConstVar.RESIZE_SIZE),
+                transforms.ToTensor()
+            ])
+        }
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, item):
+        return self.transform[self.mode_train_test](Image.open(fp=self.files[item])), self.labels[item]
