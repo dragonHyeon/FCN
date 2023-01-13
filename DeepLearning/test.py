@@ -48,8 +48,8 @@ class Tester:
         # 모델을 테스트 모드로 전환
         self.model.eval()
 
-        # 배치 마다의 정확도 담을 리스트
-        batch_accuracy_list = list()
+        # 배치 마다의 mIoU 담을 리스트
+        batch_mIoU_list = list()
 
         for x, y in tqdm(self.test_dataloader, desc='test dataloader', leave=False):
 
@@ -60,9 +60,9 @@ class Tester:
             # 순전파
             y_pred = self.model(x)
 
-            # 배치 마다의 정확도 계산
-            batch_accuracy_list.append(self.metric_fn(y_pred=y_pred,
-                                                      y=y))
+            # 배치 마다의 mIoU 계산
+            batch_mIoU_list.append(self.metric_fn(y_pred=y_pred,
+                                                  y=y))
 
         # score 기록
-        self.score = np.mean(batch_accuracy_list)
+        self.score = np.mean(batch_mIoU_list)

@@ -43,19 +43,19 @@ def arguments():
                                      description="* Run this to train the model.")
 
     # parser 인자 목록 생성
-    # 학습 데이터 디렉터리 설정
-    parser.add_argument("--train_data_dir",
+    # x 데이터 디렉터리 설정
+    parser.add_argument("--data_dir_x",
                         type=str,
-                        help='set training data directory',
-                        default=ConstVar.DATA_DIR_TRAIN,
-                        dest="train_data_dir")
+                        help='set x data directory',
+                        default=ConstVar.DATA_DIR_X,
+                        dest="data_dir_x")
 
-    # 테스트 데이터 디렉터리 설정
-    parser.add_argument("--test_data_dir",
+    # y 데이터 디렉터리 설정
+    parser.add_argument("--data_dir_y",
                         type=str,
-                        help='set test data directory',
-                        default=ConstVar.DATA_DIR_TEST,
-                        dest="test_data_dir")
+                        help='set y data directory',
+                        default=ConstVar.DATA_DIR_Y,
+                        dest="data_dir_y")
 
     # 결과물 파일 저장할 디렉터리 위치
     parser.add_argument("--output_dir",
@@ -125,16 +125,17 @@ def run_program(args):
     from Common import ConstVar
     from DeepLearning.train import Trainer
     from DeepLearning.test import Tester
-    from DeepLearning.dataloader import CIFAR100_train, CIFAR100_test
-    from DeepLearning.model import vgg16
+    from DeepLearning.dataloader import CXRDataset
+    from DeepLearning.model import FCNs, VGGNet
     from DeepLearning.loss import loss_fn
-    from DeepLearning.metric import accuracy
+    from DeepLearning.metric import mIoU
 
     # GPU / CPU 설정
     device = ConstVar.DEVICE_CUDA if torch.cuda.is_available() else ConstVar.DEVICE_CPU
 
     # 모델 선언
-    model = vgg16()
+    model = FCNs(pretrained_net=VGGNet(pretrained=True),
+                 num_classes=ConstVar.NUM_CLASSES)
     # 모델을 해당 디바이스로 이동
     model.to(device)
 
@@ -143,12 +144,18 @@ def run_program(args):
                                     lr=args.learning_rate)
 
     # 학습용 데이터로더 선언
-    train_dataloader = DataLoader(dataset=CIFAR100_train,
-                                  batch_size=args.batch_size,
-                                  shuffle=args.shuffle)
+    train_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.data_dir_x,
+                                                     data_dir_y=args.data_dir_y,
+                                                     mode_train_test=ConstVar.MODE_TRAIN),
+                                  batch_size=ConstVar.BATCH_SIZE,
+                                  shuffle=ConstVar.SHUFFLE)
 
     # 테스트용 데이터로더 선언
-    test_dataloader = DataLoader(dataset=CIFAR100_test)
+    test_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.data_dir_x,
+                                                    data_dir_y=args.data_dir_y,
+                                                    mode_train_test=ConstVar.MODE_TEST),
+                                 batch_size=ConstVar.BATCH_SIZE,
+                                 shuffle=ConstVar.SHUFFLE)
 
     # 모델 학습 객체 선언
     trainer = Trainer(model=model,
@@ -163,7 +170,7 @@ def run_program(args):
                     tracking_frequency=args.tracking_frequency,
                     Tester=Tester,
                     test_dataloader=test_dataloader,
-                    metric_fn=accuracy,
+                    metric_fn=mIoU,
                     checkpoint_file=args.checkpoint_file)
 
 
