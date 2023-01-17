@@ -43,19 +43,33 @@ def arguments():
                                      description="* Run this to train the model.")
 
     # parser 인자 목록 생성
-    # x 데이터 디렉터리 설정
-    parser.add_argument("--data_dir_x",
+    # 학습 x 데이터 디렉터리 설정
+    parser.add_argument("--train_data_dir_x",
                         type=str,
-                        help='set x data directory',
-                        default=ConstVar.DATA_DIR_X,
-                        dest="data_dir_x")
+                        help='set x train data directory',
+                        default=ConstVar.TRAIN_DATA_DIR_X,
+                        dest="train_data_dir_x")
 
-    # y 데이터 디렉터리 설정
-    parser.add_argument("--data_dir_y",
+    # 학습 y 데이터 디렉터리 설정
+    parser.add_argument("--train_data_dir_y",
                         type=str,
-                        help='set y data directory',
-                        default=ConstVar.DATA_DIR_Y,
-                        dest="data_dir_y")
+                        help='set y train data directory',
+                        default=ConstVar.TRAIN_DATA_DIR_Y,
+                        dest="train_data_dir_y")
+
+    # 테스트 x 데이터 디렉터리 설정
+    parser.add_argument("--test_data_dir_x",
+                        type=str,
+                        help='set x test data directory',
+                        default=ConstVar.TEST_DATA_DIR_X,
+                        dest="test_data_dir_x")
+
+    # 테스트 y 데이터 디렉터리 설정
+    parser.add_argument("--test_data_dir_y",
+                        type=str,
+                        help='set y test data directory',
+                        default=ConstVar.TEST_DATA_DIR_Y,
+                        dest="test_data_dir_y")
 
     # 결과물 파일 저장할 디렉터리 위치
     parser.add_argument("--output_dir",
@@ -144,18 +158,16 @@ def run_program(args):
                                     lr=args.learning_rate)
 
     # 학습용 데이터로더 선언
-    train_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.data_dir_x,
-                                                     data_dir_y=args.data_dir_y,
+    train_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.train_data_dir_x,
+                                                     data_dir_y=args.train_data_dir_y,
                                                      mode_train_test=ConstVar.MODE_TRAIN),
                                   batch_size=ConstVar.BATCH_SIZE,
                                   shuffle=ConstVar.SHUFFLE)
 
     # 테스트용 데이터로더 선언
-    test_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.data_dir_x,
-                                                    data_dir_y=args.data_dir_y,
-                                                    mode_train_test=ConstVar.MODE_TEST),
-                                 batch_size=ConstVar.BATCH_SIZE,
-                                 shuffle=ConstVar.SHUFFLE)
+    test_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.test_data_dir_x,
+                                                    data_dir_y=args.test_data_dir_y,
+                                                    mode_train_test=ConstVar.MODE_TEST))
 
     # 모델 학습 객체 선언
     trainer = Trainer(model=model,

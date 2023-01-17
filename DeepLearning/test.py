@@ -51,18 +51,25 @@ class Tester:
         # 배치 마다의 mIoU 담을 리스트
         batch_mIoU_list = list()
 
+        # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담을 리스트. (사실 mIoU 시각화 이미지는 여기서 담는건 아님. 나중에 만들어질 거임)
+        self.pics_list = list()
+
         for x, y in tqdm(self.test_dataloader, desc='test dataloader', leave=False):
 
             # 각 텐서를 해당 디바이스로 이동
             x = x.to(self.device)
             y = y.to(self.device)
 
-            # 순전파
-            y_pred = self.model(x)
+            # 순전파. deepcopy 오류 방지를 위해 detach
+            y_pred = self.model(x).detach()
 
             # 배치 마다의 mIoU 계산
             batch_mIoU_list.append(self.metric_fn(y_pred=y_pred,
                                                   y=y))
+
+            # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담기 (설정한 개수 만큼)
+            if len(self.pics_list) < ConstVar.NUM_PICS_LIST:
+                self.pics_list.append((x, y, y_pred))
 
         # score 기록
         self.score = np.mean(batch_mIoU_list)

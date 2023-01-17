@@ -43,19 +43,19 @@ def arguments():
                                      description="* Run this to test the model.")
 
     # parser 인자 목록 생성
-    # x 데이터 디렉터리 설정
-    parser.add_argument("--data_dir_x",
+    # 테스트 x 데이터 디렉터리 설정
+    parser.add_argument("--test_data_dir_x",
                         type=str,
-                        help='set x data directory',
-                        default=ConstVar.DATA_DIR_X,
-                        dest="data_dir_x")
+                        help='set x test data directory',
+                        default=ConstVar.TEST_DATA_DIR_X,
+                        dest="test_data_dir_x")
 
-    # y 데이터 디렉터리 설정
-    parser.add_argument("--data_dir_y",
+    # 테스트 y 데이터 디렉터리 설정
+    parser.add_argument("--test_data_dir_y",
                         type=str,
-                        help='set y data directory',
-                        default=ConstVar.DATA_DIR_Y,
-                        dest="data_dir_y")
+                        help='set y test data directory',
+                        default=ConstVar.TEST_DATA_DIR_Y,
+                        dest="test_data_dir_y")
 
     # 불러올 체크포인트 파일 경로
     parser.add_argument("--checkpoint_file",
@@ -96,11 +96,9 @@ def run_program(args):
     model.to(device)
 
     # 테스트용 데이터로더 선언
-    test_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.data_dir_x,
-                                                    data_dir_y=args.data_dir_y,
-                                                    mode_train_test=ConstVar.MODE_TEST),
-                                 batch_size=ConstVar.BATCH_SIZE,
-                                 shuffle=ConstVar.SHUFFLE)
+    test_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.test_data_dir_x,
+                                                    data_dir_y=args.test_data_dir_y,
+                                                    mode_train_test=ConstVar.MODE_TEST))
 
     # 모델 테스트 객체 선언
     tester = Tester(model=model,

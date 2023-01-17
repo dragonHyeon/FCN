@@ -86,6 +86,15 @@ class Trainer:
                                  current_epoch_num=current_epoch_num,
                                  title=metric_fn.__name__)
 
+                # 결과물 시각화 진행
+                pics_dir = UtilLib.getNewPath(path=output_dir,
+                                              add=ConstVar.OUTPUT_DIR_SUFFIX_PICS)
+                pics_filepath = UtilLib.getNewPath(path=pics_dir,
+                                                   add=ConstVar.PICS_FILE_NAME.format(current_epoch_num))
+                utils.save_pics(pics_list=tester.pics_list,
+                                filepath=pics_filepath,
+                                title=self.model.__class__.__name__)
+
     def _train(self):
         """
         * 학습 진행
@@ -133,10 +142,10 @@ class Trainer:
                 self.best_score = best_tester.score
             # 없다면 0 으로 초기화
             else:
-                self.best_score = ConstVar.INITIAL_BEST_ACCURACY_ZERO
+                self.best_score = ConstVar.INITIAL_BEST_MIOU_ZERO
 
         # best 성능 갱신
-        if tester.score < self.best_score:
+        if tester.score > self.best_score:
             self.best_score = tester.score
             return True
         else:

@@ -93,11 +93,11 @@ class CXRDataset(Dataset):
         )
 
         # 실제 사용될 x 데이터 경로 모음
-        self.x_path_list = sorted([UtilLib.getNewPath(path=ConstVar.DATA_DIR_X,
+        self.x_path_list = sorted([UtilLib.getNewPath(path=self.data_dir_x,
                                                       add='{0}.png'.format(core_filename)) for core_filename in total_overlapping_core_filename_list])
 
         # 실제 사용될 y 데이터 경로 모음
-        self.y_path_list = sorted([UtilLib.getNewPath(path=ConstVar.DATA_DIR_Y,
+        self.y_path_list = sorted([UtilLib.getNewPath(path=self.data_dir_y,
                                                       add='{0}_mask.png'.format(core_filename)) for core_filename in total_overlapping_core_filename_list])
 
     @staticmethod
