@@ -42,7 +42,7 @@ class Tester:
     def _test(self):
         """
         * 테스트 진행
-        :return: score 기록
+        :return: 이미지 생성 및 score 기록
         """
 
         # 모델을 테스트 모드로 전환
@@ -51,7 +51,7 @@ class Tester:
         # 배치 마다의 mIoU 담을 리스트
         batch_mIoU_list = list()
 
-        # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담을 리스트. (사실 mIoU 시각화 이미지는 여기서 담는건 아님. 나중에 만들어질 거임)
+        # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담을 리스트. (사실 mIoU 시각화 이미지는 여기서 담는건 아님. 나중에 만들어질거임)
         self.pics_list = list()
 
         for x, y in tqdm(self.test_dataloader, desc='test dataloader', leave=False):
