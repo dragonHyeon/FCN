@@ -67,7 +67,7 @@ def save_pics(pics_list, filepath, title):
     # plt 로 시각화 할 수 있는 형식으로 변환
     for x, y, y_pred in pics_list:
         x = x.cpu().reshape(-1, 224, 224).permute(1, 2, 0)
-        y = y.cpu().detach().reshape(-1, 224, 224).permute(1, 2, 0)
+        y = y.cpu().reshape(-1, 224, 224).permute(1, 2, 0)
         y_pred = torch.argmax(input=y_pred,
                               dim=1)
         y_pred = y_pred.cpu().detach().reshape(-1, 224, 224).permute(1, 2, 0)
