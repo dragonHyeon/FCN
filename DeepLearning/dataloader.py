@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 from PIL import Image
-import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 
@@ -108,20 +107,21 @@ class CXRDataset(Dataset):
         :return: one-hot encoding 및 변환된 mask (semantic segmentation 의 ground truth 형태). (224, 224)
         """
 
-        # 클래스 개수에 맞게 채널 늘려주기 (이 경우는 2 개라 2 채널만 사용)
-        one_hot_mask = torch.cat(tensors=[mask, mask], dim=0)
+        # one-hot encoding 및 변환된 mask 담기 위한 변수
+        one_hot_mask = np.empty_like(mask, dtype=np.int64)
 
         # 배경에 해당하는 조건
         back_condition = (mask == 0)
         # 사물에 해당하는 조건
         object_condition = (mask > 0)
 
-        # 배경 영역에 대해서는 배경 채널 (채널 0) 에 1 할당, 나머지 채널 (채널 1) 에 0 할당
-        one_hot_mask[0, :, :] = torch.from_numpy(np.where(back_condition, 1, 0))
-        # 사물 영역에 대해서는 사물 채널 (채널 1) 에 1 할당, 나머지 채널 (채널 0) 에 0 할당
-        one_hot_mask[1, :, :] = torch.from_numpy(np.where(object_condition, 1, 0))
+        # 클래스 값 부여. 값은 0, 1, 2, ... , num_class-1 로 이루어져 있을 거임. 이 경우는 클래스가 2 개라 0 과 1 만 존재
+        # 배경 영역에 대해서는 0 부여
+        one_hot_mask[back_condition] = 0
+        # 사물 영역에 대해서는 1 부여
+        one_hot_mask[object_condition] = 1
 
-        # 한 개의 채널로 통합. 값은 0, 1, 2, ... , num_class-1 로 이루어져 있을 거임. 이 경우는 클래스가 2 개라 0 과 1 만 존재
-        one_hot_mask = torch.argmax(input=one_hot_mask, dim=0)
+        # (1, 224, 224) -> (224, 224) 로 shape 바꾸기
+        one_hot_mask = np.squeeze(a=one_hot_mask, axis=0)
 
         return one_hot_mask
