@@ -54,6 +54,8 @@ class Tester:
         # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담을 리스트. (사실 mIoU 시각화 이미지는 여기서 담는건 아님. 나중에 만들어질거임)
         self.pics_list = list()
 
+        # x shape: (N (1), 3, 224, 224)
+        # y shape: (N (1), 224, 224)
         for x, y in tqdm(self.test_dataloader, desc='test dataloader', leave=False):
 
             # 각 텐서를 해당 디바이스로 이동

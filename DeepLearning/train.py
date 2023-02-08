@@ -104,8 +104,8 @@ class Trainer:
         # 모델을 학습 모드로 전환
         self.model.train()
 
-        # x shape: (N, 3, 32, 32)
-        # y shape: (N)
+        # x shape: (N, 3, 224, 224)
+        # y shape: (N, 224, 224)
         for x, y in tqdm(self.train_dataloader, desc='train dataloader', leave=False):
 
             # 각 텐서를 해당 디바이스로 이동

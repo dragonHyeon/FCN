@@ -75,14 +75,14 @@ class FCNs(nn.Module):
         self.bn5 = nn.BatchNorm2d(num_features=32)
 
         # NIN
-        # (N, 32, 224, 224) -> (N, num_classes, 224, 224)
+        # (N, 32, 224, 224) -> (N, num_classes (2), 224, 224)
         self.classifier = nn.Conv2d(in_channels=32, out_channels=num_classes, kernel_size=1)
 
     def forward(self, x):
         """
         * 순전파
         :param x: 배치 개수 만큼의 입력. (N, 3, 224, 224)
-        :return: 배치 개수 만큼의 출력. (N, num_classes, 224, 224)
+        :return: 배치 개수 만큼의 출력. (N, num_classes (2), 224, 224)
         """
 
         # Max pooling 단위 결과 모음 dict
@@ -109,7 +109,7 @@ class FCNs(nn.Module):
         score = x1 + self.bn4(self.relu(self.deconv4(score)))
         # (N, 64, 112, 112) -> (N, 32, 224, 224)
         score = self.bn5(self.relu(self.deconv5(score)))
-        # (N, 32, 224, 224) -> (N, num_classes, 224, 224)
+        # (N, 32, 224, 224) -> (N, num_classes (2), 224, 224)
         score = self.classifier(score)
 
         return score

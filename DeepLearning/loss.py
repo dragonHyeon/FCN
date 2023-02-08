@@ -9,8 +9,8 @@ def forward(self, input: Tensor, target: Tensor) -> Tensor:
 
 사용 설명
 batch size = 2 인 경우
-input(예측한 값): model 의 output 값. ex) [[-0.3588, -0.0903,  0.0114], [-0.3502, -0.0834,  0.0395]]
-target(실제 값): label 값. ex) [0, 2]
+input(예측한 값): model 의 output 값. ex) [[-0.3588, -0.0903,  0.0114], [-0.3502, -0.0834,  0.0395]] (N, num_classes, 224, 224)
+target(실제 값): label 값. ex) [0, 2] (N, 224, 224)
 
 원래는 softmax 된 배열이어야 하지만
 nn.CrossEntropyLoss() 에서는 내부적으로

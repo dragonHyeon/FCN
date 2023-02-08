@@ -105,7 +105,7 @@ class CXRDataset(Dataset):
         """
         * 원본 mask 데이터에 대하여 semantic segmentation 의 ground truth 형태로 one-hot encoding 및 변환 해주는 함수
         :param mask: 원본 mask 데이터. (1, 224, 224)
-        :return: one-hot encoding 및 변환된 mask (semantic segmentation 의 ground truth 형태). (1, 224, 224)
+        :return: one-hot encoding 및 변환된 mask (semantic segmentation 의 ground truth 형태). (224, 224)
         """
 
         # 클래스 개수에 맞게 채널 늘려주기 (이 경우는 2 개라 2 채널만 사용)

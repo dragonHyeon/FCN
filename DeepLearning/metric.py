@@ -4,8 +4,8 @@ import numpy as np
 def mIoU(y_pred, y):
     """
     * 해당 배치의 mIoU 구하기
-    :param y_pred: shape: (batch, class 개수, 224, 224)
-    :param y: shape: (batch, 224, 224)
+    :param y_pred: shape: (N, num_classes, 224, 224)
+    :param y: shape: (N, 224, 224)
     :return: 해당하는 배치의 mIoU
     """
 
