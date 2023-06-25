@@ -1,4 +1,4 @@
-import os, sys, argparse
+import os, sys, argparse, time
 
 
 def set_path():
@@ -43,26 +43,33 @@ def arguments():
                                      description="* Run this to test the model.")
 
     # parser 인자 목록 생성
-    # 테스트 x 데이터 디렉터리 설정
-    parser.add_argument("--test_data_dir_x",
+    # 입력 이미지 파일 디렉터리 위치
+    parser.add_argument("--input_dir",
                         type=str,
-                        help='set x test data directory',
-                        default=ConstVar.TEST_DATA_DIR_X,
-                        dest="test_data_dir_x")
-
-    # 테스트 y 데이터 디렉터리 설정
-    parser.add_argument("--test_data_dir_y",
-                        type=str,
-                        help='set y test data directory',
-                        default=ConstVar.TEST_DATA_DIR_Y,
-                        dest="test_data_dir_y")
+                        help='set input image file directory',
+                        default=ConstVar.INPUT_DIR,
+                        dest='input_dir')
 
     # 불러올 체크포인트 파일 경로
     parser.add_argument("--checkpoint_file",
                         type=str,
                         help='set checkpoint file to load if exists',
-                        default=None,
+                        default='C:/dragonhyeon/python_directory/movements/40fcn/DATA/checkpoint/epoch00020.ckpt',
                         dest='checkpoint_file')
+
+    # 결과물 파일 저장할 디렉터리 위치
+    parser.add_argument("--output_dir",
+                        type=str,
+                        help='set the directory where output files will be saved',
+                        default=ConstVar.OUTPUT_DIR,
+                        dest='output_dir')
+
+    # segmentation 된 이미지 파일 저장될 폴더명
+    parser.add_argument("--segmentation_folder_name",
+                        type=str,
+                        help='set segmentation folder name which segmentation images going to be saved',
+                        default=time.time(),
+                        dest="segmentation_folder_name")
 
     # parsing 한거 가져오기
     args = parser.parse_args()
@@ -78,36 +85,33 @@ def run_program(args):
     """
 
     import torch
-    from torch.utils.data import DataLoader
 
     from Common import ConstVar
     from DeepLearning.test import Tester
-    from DeepLearning.dataloader import CXRDataset
     from DeepLearning.model import FCNs, VGGNet
-    from DeepLearning.metric import mIoU
+    from DeepLearning import utils
 
     # GPU / CPU 설정
     device = ConstVar.DEVICE_CUDA if torch.cuda.is_available() else ConstVar.DEVICE_CPU
 
-    # 모델 선언
+    # 체크포인트 파일 불러오기
+    state = utils.load_checkpoint(filepath=args.checkpoint_file)
+
+    # 모델 선언 및 가중치 불러오기
     model = FCNs(pretrained_net=VGGNet(pretrained=True),
                  num_classes=ConstVar.NUM_CLASSES)
+    model.load_state_dict(state[ConstVar.KEY_STATE_MODEL])
     # 모델을 해당 디바이스로 이동
     model.to(device)
 
-    # 테스트용 데이터로더 선언
-    test_dataloader = DataLoader(dataset=CXRDataset(data_dir_x=args.test_data_dir_x,
-                                                    data_dir_y=args.test_data_dir_y,
-                                                    mode_train_test=ConstVar.MODE_TEST))
-
     # 모델 테스트 객체 선언
     tester = Tester(model=model,
-                    metric_fn=mIoU,
-                    test_dataloader=test_dataloader,
                     device=device)
 
     # 모델 테스트
-    tester.running(checkpoint_file=args.checkpoint_file)
+    tester.running(input_dir=args.input_dir,
+                   output_dir=args.output_dir,
+                   segmentation_folder_name=args.segmentation_folder_name)
 
 
 def main():

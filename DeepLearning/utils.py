@@ -10,7 +10,7 @@ def load_checkpoint(filepath):
     """
     * 체크포인트 불러오기
     :param filepath: 불러올 체크포인트 파일 경로
-    :return: state 모음 (model.state_dict(), optimizer.state_dict(), epoch)
+    :return: state 모음 (model.state_dict(), optimizer.state_dict(), epoch, score)
     """
 
     # state 불러오기
@@ -20,13 +20,14 @@ def load_checkpoint(filepath):
     return state
 
 
-def save_checkpoint(filepath, model, optimizer=None, epoch=None, is_best=False):
+def save_checkpoint(filepath, model, optimizer=None, epoch=None, score=None, is_best=False):
     """
     * 체크포인트 저장
     :param filepath: 저장될 체크포인트 파일 경로
     :param model: 저장될 모델
     :param optimizer: 저장될 optimizer
     :param epoch: 저장될 현재 학습 epoch 횟수
+    :param score: 저장될 현재 score
     :param is_best: 현재 저장하려는 모델이 가장 좋은 성능의 모델인지 여부
     :return: 체크포인트 파일 생성됨
     """
@@ -38,7 +39,8 @@ def save_checkpoint(filepath, model, optimizer=None, epoch=None, is_best=False):
     state = {
         ConstVar.KEY_STATE_MODEL: model.state_dict(),
         ConstVar.KEY_STATE_OPTIMIZER: optimizer.state_dict(),
-        ConstVar.KEY_STATE_EPOCH: epoch
+        ConstVar.KEY_STATE_EPOCH: epoch,
+        ConstVar.KEY_STATE_SCORE: score
     }
 
     # state 저장
@@ -120,7 +122,7 @@ def visualize_mIoU(prediction_map, ground_truth):
 
     # 3 채널 RGB 이미지로 시각화하기 위한 ndarray
     # (224, 224, 1) -> (224, 224, 3)
-    mIoU_vis = np.zeros(shape=[*ground_truth.shape[:2], 3])
+    mIoU_vis = np.zeros(shape=[*ground_truth.shape[:2], 3], dtype=np.uint8)
 
     # (224, 224, 1) -> (224, 224)
     prediction_map = prediction_map.numpy().squeeze()

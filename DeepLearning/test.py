@@ -1,77 +1,135 @@
-import numpy as np
-from tqdm import tqdm
+import os
+
+import torch
+from torchvision import transforms
+from PIL import Image
 
 from Common import ConstVar
-from DeepLearning import utils
+from Lib import UtilLib, DragonLib
 
 
 class Tester:
-    def __init__(self, model, metric_fn, test_dataloader, device):
+    def __init__(self, model, device):
         """
         * 테스트 관련 클래스
         :param model: 테스트 할 모델
-        :param metric_fn: 학습 성능 체크하기 위한 metric
-        :param test_dataloader: 테스트용 데이터로더
         :param device: GPU / CPU
         """
 
         # 테스트 할 모델
         self.model = model
-        # 학습 성능 체크하기 위한 metric
-        self.metric_fn = metric_fn
-        # 테스트용 데이터로더
-        self.test_dataloader = test_dataloader
         # GPU / CPU
         self.device = device
 
-    def running(self, checkpoint_file=None):
+    def running(self, input_dir, output_dir, segmentation_folder_name):
         """
         * 테스트 셋팅 및 진행
-        :param checkpoint_file: 불러올 체크포인트 파일
+        :param input_dir: 입력 이미지 파일 디렉터리 위치
+        :param output_dir: 결과물 파일 저장할 디렉터리 위치
+        :param segmentation_folder_name: segmentation 된 이미지 파일 저장될 폴더명
         :return: 테스트 수행됨
         """
 
-        # 불러올 체크포인트 파일 있을 경우 불러오기
-        if checkpoint_file:
-            state = utils.load_checkpoint(filepath=checkpoint_file)
-            self.model.load_state_dict(state[ConstVar.KEY_STATE_MODEL])
-
         # 테스트 진행
-        self._test()
+        result_list = self._test(input_dir=input_dir)
 
-    def _test(self):
+        for y_pred, img_filepath in result_list:
+
+            # 시각화를 위해 prediction map 으로 변환 및 PIL image 로 변환
+            prediction_map_pil = self._convert_data(y_pred=y_pred)
+
+            # 이미지 저장 경로
+            img_filename = UtilLib.getOnlyFileName(filePath=img_filepath)
+            segmentation_img_dir = UtilLib.getNewPath(path=output_dir, add=ConstVar.OUTPUT_DIR_SUFFIX_SEGMENTATION_IMG.format(segmentation_folder_name))
+            original_img_dir = UtilLib.getNewPath(path=segmentation_img_dir, add=ConstVar.OUTPUT_DIR_SUFFIX_ORIGINAL)
+            segmented_img_dir = UtilLib.getNewPath(path=segmentation_img_dir, add=ConstVar.OUTPUT_DIR_SUFFIX_SEGMENTED)
+            original_img_filepath = UtilLib.getNewPath(path=original_img_dir, add=ConstVar.SEGMENTATION_IMG_FILE_NAME.format(img_filename))
+            segmented_img_filepath = UtilLib.getNewPath(path=segmented_img_dir, add=ConstVar.SEGMENTATION_IMG_FILE_NAME.format(img_filename))
+
+            # 원본 이미지 저장
+            DragonLib.copyfile_with_make_parent_dir(src=img_filepath, dst=original_img_filepath)
+            # 결과물 이미지 저장
+            self._save_pics(prediction_map_pil=prediction_map_pil, filepath=segmented_img_filepath)
+
+    def _test(self, input_dir):
         """
         * 테스트 진행
-        :return: 이미지 생성 및 score 기록
+        :param input_dir: 입력 이미지 파일 디렉터리 위치
+        :return: 이미지 segmentation 결과물 및 파일 경로 반환
         """
+
+        # segmentation 된 결과물 및 원본 이미지 경로명 담을 리스트
+        result_list = []
 
         # 모델을 테스트 모드로 전환
         self.model.eval()
 
-        # 배치 마다의 mIoU 담을 리스트
-        batch_mIoU_list = list()
+        for image_filename in os.listdir(input_dir):
 
-        # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담을 리스트. (사실 mIoU 시각화 이미지는 여기서 담는건 아님. 나중에 만들어질거임)
-        self.pics_list = list()
+            # 이미지 읽고 변환하기
+            img_filepath = UtilLib.getNewPath(path=input_dir, add=image_filename)
+            img = self._read_img(filepath=img_filepath)
+            img = img.unsqueeze(dim=0)
 
-        # x shape: (N (1), 3, 224, 224)
-        # y shape: (N (1), 224, 224)
-        for x, y in tqdm(self.test_dataloader, desc='test dataloader', leave=False):
+            # 이미지 segmentation 진행
+            img = img.to(self.device)
+            y_pred = self.model(img)
 
-            # 각 텐서를 해당 디바이스로 이동
-            x = x.to(self.device)
-            y = y.to(self.device)
+            # segmentation 된 결과물과 원본 이미지 경로명 담기
+            result_list.append((y_pred, img_filepath))
 
-            # 순전파. deepcopy 오류 방지를 위해 detach
-            y_pred = self.model(x).detach()
+        return result_list
 
-            # 배치 마다의 mIoU 계산
-            batch_mIoU_list.append(self.metric_fn(y_pred=y_pred,
-                                                  y=y))
+    @staticmethod
+    def _read_img(filepath):
+        """
+        * 이미지 읽고 변환하기
+        :param filepath: 읽어 올 이미지 파일 경로
+        :return: 이미지 읽어 변환 해줌
+        """
 
-            # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담기 (설정한 개수 만큼)
-            if len(self.pics_list) < ConstVar.NUM_PICS_LIST:
-                self.pics_list.append((x, y, y_pred))
+        # 데이터 변환 함수
+        transform = transforms.Compose([
+            transforms.Grayscale(num_output_channels=3),
+            transforms.Resize(size=(ConstVar.RESIZE_SIZE, ConstVar.RESIZE_SIZE)),
+            transforms.ToTensor()
+        ])
 
-        # score 기록
-        self.score = np.mean(batch_mIoU_list)
+        # 이미지 읽기 및 변환
+        img = transform(Image.open(fp=filepath))
+
+        return img
+
+    @staticmethod
+    def _convert_data(y_pred):
+        """
+        * 시각화를 위해 segmentation 한 결과를 prediction map 으로 변환 및 PIL image 로 바꿔주기
+        :param y_pred: segmentation 한 결과물
+        :return: 변환된 형태의 PIL image
+        """
+
+        # tensor 에서 PIL 로 변환시켜주는 함수
+        transform = transforms.ToPILImage()
+
+        # segmentation 한 결과를 prediction map 으로 변환
+        prediction_map = torch.argmax(input=y_pred, dim=1).type(torch.float16)
+
+        # PIL image 로 변환
+        prediction_map_pil = transform(prediction_map)
+
+        return prediction_map_pil
+
+    @staticmethod
+    def _save_pics(prediction_map_pil, filepath):
+        """
+        * 이미지 파일 저장
+        :param prediction_map_pil: segmentation 된 PIL image 형식의 이미지
+        :param filepath: 저장될 그림 파일 경로
+        :return: 그림 파일 생성됨
+        """
+
+        # 저장하고자 하는 경로의 상위 디렉터리가 존재하지 않는 경우 상위 경로 생성
+        DragonLib.make_parent_dir_if_not_exits(target_path=filepath)
+
+        # 그림 저장
+        prediction_map_pil.save(fp=filepath)

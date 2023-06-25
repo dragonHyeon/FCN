@@ -9,9 +9,14 @@ TEST_DATA_DIR_Y = '{0}/RES/chest-xray-masks-and-labels/data/Lung Segmentation/yh
 OUTPUT_DIR = '{0}/DATA/'.format(PROJECT_ROOT_DIRECTORY)
 OUTPUT_DIR_SUFFIX_CHECKPOINT = 'checkpoint'
 OUTPUT_DIR_SUFFIX_PICS = 'pics'
+OUTPUT_DIR_SUFFIX_SEGMENTATION_IMG = 'segmentation_img/{0}'
+OUTPUT_DIR_SUFFIX_ORIGINAL = 'original'
+OUTPUT_DIR_SUFFIX_SEGMENTED = 'segmented'
+INPUT_DIR = '{0}/RES/sample/'.format(PROJECT_ROOT_DIRECTORY)
 CHECKPOINT_FILE_NAME = 'epoch{:05d}.ckpt'
 PICS_FILE_NAME = 'epoch{:05d}.png'
 CHECKPOINT_BEST_FILE_NAME = 'best_model.ckpt'
+SEGMENTATION_IMG_FILE_NAME = '{0}.png'
 
 # 학습 / 테스트 모드
 MODE_TRAIN = 'train'
@@ -43,6 +48,7 @@ RESIZE_SIZE = 224
 KEY_STATE_MODEL = 'model'
 KEY_STATE_OPTIMIZER = 'optimizer'
 KEY_STATE_EPOCH = 'epoch'
+KEY_STATE_SCORE = 'score'
 
 # 초기 값
 INITIAL_START_EPOCH_NUM = 1

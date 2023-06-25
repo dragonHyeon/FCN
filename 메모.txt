@@ -35,3 +35,15 @@ clone 은 Tensor 의 함수이기 때문에 tester 에 적용하면 Tester 객�
 메모리 오버플로우 났었음.
 이유는 train, test 데이터 나누지 않고 똑같이 사용하니까 test 시에 데이터가 train 데이터랑 양이 똑같으니까 매우 많은데 거기에 결과물 그림까지 저장하려 했더니 오류났었음
 그래서 8대 2 비율로 나눠주고 했더니 메모리 오버플로우 해결 되었음
+
+mIoU_vis 의 경우 RGB 데이터 이므로 소수점이면 0 에서 1 정수이면 0 에서 225 만 가질 수 있다. (plt 로 저장하려 할 때)
+데이터 타입 지정 안하고 그냥 실행하니 0 에서 255 는 맞지만
+[  0. 255.] (224, 224, 3) 이렇게 소주점 처리 되어서 아래와 같은 경고 메세지 발생하며 실행됨
+Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+해당 경고 메세지 안뜨게 하기 위해
+mIoU_vis = np.zeros(shape=[*ground_truth.shape[:2], 3], dtype=np.uint8)
+이렇게 데이터 타입을 np.uint8 로 지정했음
+y 와 y_pred 는
+[0 1] torch.Size([224, 224, 1]) 이렇게 정수형인데 0, 1 이지만 RGB 데이터가 아니기 때문에 알아서 흑과 백으로 잘 처리되어 나오는듯
+
+단, prediction_map 의 경우 PIL 이미지로 변환하려는 경우 자료형이 int64 면 안돼서 .type(torch.float16) 로 바꿔줌
