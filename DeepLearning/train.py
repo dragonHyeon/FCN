@@ -108,7 +108,7 @@ class Trainer:
         # loss 선언
         cross_entropy = nn.CrossEntropyLoss()
 
-        # x shape: (N, in_channels (3), 224, 224)
+        # x shape: (N, 3, 224, 224)
         # y shape: (N, 224, 224)
         for x, y in tqdm(self.train_dataloader, desc='train dataloader', leave=False):
 
@@ -140,7 +140,7 @@ class Trainer:
         # 입력, ground truth, predicted segmentation map, mIoU 시각화 이미지 쌍 담을 리스트. (사실 mIoU 시각화 이미지는 여기서 담는건 아님. 나중에 만들어질거임)
         pics_list = list()
 
-        # x shape: (N (1), in_channels (3), 224, 224)
+        # x shape: (N (1), 3, 224, 224)
         # y shape: (N (1), 224, 224)
         for x, y in tqdm(self.test_dataloader, desc='test dataloader', leave=False):
 
@@ -233,10 +233,10 @@ class Trainer:
 
         # plt 에 맞게 (N, C, H, W) -> (N, H, W, C) 변환
         for x, y, y_pred in pics_list:
-            x = x.cpu().reshape(-1, 224, 224).permute(1, 2, 0)
-            y = y.cpu().reshape(-1, 224, 224).permute(1, 2, 0)
+            x = x.cpu().reshape(-1, ConstVar.RESIZE_SIZE, ConstVar.RESIZE_SIZE).permute(1, 2, 0)
+            y = y.cpu().reshape(-1, ConstVar.RESIZE_SIZE, ConstVar.RESIZE_SIZE).permute(1, 2, 0)
             y_pred = torch.argmax(input=y_pred, dim=1)
-            y_pred = y_pred.cpu().reshape(-1, 224, 224).permute(1, 2, 0)
+            y_pred = y_pred.cpu().reshape(-1, ConstVar.RESIZE_SIZE, ConstVar.RESIZE_SIZE).permute(1, 2, 0)
             mIoU_vis = utils.visualize_mIoU(prediction_map=y_pred,
                                             ground_truth=y)
 
