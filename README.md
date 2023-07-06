@@ -18,5 +18,12 @@ ___
 - Main/run_train.py 및 Main/run_test.py 에서 디바이스, 모델, optimizer, dataloader, 손실 함수, metric 등 모두 선언 및 실행
 - 모델 선언은 DeepLearning/model.py 에서 정의한 VGGNet 을 backbone network 로 함께 불러와 선언하기
 ---
+### 실행 결과물
+- Training progress
+<p align="center">
+    <img width="500" src="./IMGS/training_progress.png" alt="Training progress">
+</p>
+
+---
 ### 참조
 https://github.com/MV-CuttingEdgeAI/YHKim-DeepLearningStudy
